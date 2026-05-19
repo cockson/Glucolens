@@ -27,7 +27,9 @@ export default function ExternalValidation(){
     try{
       const r = await api.get("/api/validation/runs");
       setRuns(r.data);
-    }catch{}
+    }catch{
+      setRuns([]);
+    }
   }
 
   useEffect(()=>{ refresh(); },[]);

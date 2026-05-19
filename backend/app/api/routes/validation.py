@@ -165,14 +165,31 @@ def run_external_validation(dataset_id: str, db: Session = Depends(get_db), user
     db.add(run)
     db.commit()
 
+    if not settings.REDIS_URL:
+        try:
+            run_validation_job(run_id, dataset_id)
+        except Exception:
+            pass
+        db.refresh(run)
+        return {"ok": True, "run_id": run_id, "status": run.status}
+
     try:
         from rq import Queue
-    except Exception:
-        raise HTTPException(status_code=503, detail="Background queue dependency 'rq' is not installed")
-
-    conn = redis.from_url(settings.REDIS_URL)
-    q = Queue("default", connection=conn)
-    q.enqueue(run_validation_job, run_id, dataset_id)
+        conn = redis.from_url(settings.REDIS_URL)
+        q = Queue("default", connection=conn)
+        q.enqueue(run_validation_job, run_id, dataset_id)
+    except Exception as exc:
+        try:
+            run_validation_job(run_id, dataset_id)
+        except Exception:
+            pass
+        db.refresh(run)
+        return {
+            "ok": True,
+            "run_id": run_id,
+            "status": run.status,
+            "message": f"Background queue unavailable; ran inline instead: {type(exc).__name__}",
+        }
 
     return {"ok": True, "run_id": run_id, "status": "queued"}
 

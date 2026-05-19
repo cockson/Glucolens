@@ -57,6 +57,16 @@ def _ensure_space(c, y, needed, h):
     return y
 
 
+def _top_features_sorted(items):
+    def impact(item):
+        try:
+            return abs(float(item.get("shap_value", 0.0)))
+        except Exception:
+            return 0.0
+
+    return sorted(items, key=impact, reverse=True)
+
+
 def _draw_brand_header(c, w, h):
     y = h - 2.0 * cm
     cx = 2.6 * cm
@@ -151,8 +161,6 @@ def render_fusion_report_pdf(out: dict) -> bytes:
         ("Family history of diabetes", _fmt_yes_no(tab_inputs.get("family_history_diabetes"))),
         ("Systolic BP (mmHg)", _fmt_value(tab_inputs.get("systolic_bp"))),
         ("Diastolic BP (mmHg)", _fmt_value(tab_inputs.get("diastolic_bp"))),
-        ("Fasting glucose (mg/dL)", _fmt_value(tab_inputs.get("fasting_glucose_mgdl"))),
-        ("HbA1c (%)", _fmt_value(tab_inputs.get("hba1c_pct"))),
         ("Physical activity", _fmt_value(tab_inputs.get("physical_activity"))),
         ("Smoking status", _fmt_value(tab_inputs.get("smoking_status"))),
     ]
@@ -160,15 +168,15 @@ def render_fusion_report_pdf(out: dict) -> bytes:
         y = _ensure_space(c, y, 3.2 * cm, h)
         y = _line(c, f"- {label}: {value}", 2.4 * cm, y, "Helvetica", 9)
 
-    top = (tab.get("explainability") or {}).get("top_features") or []
+    top = _top_features_sorted((tab.get("explainability") or {}).get("top_features") or [])
     if top:
-        y = _line(c, "Top contributing factors:", 2 * cm, y)
+        y = _line(c, "Top contributing feature coefficients:", 2 * cm, y)
         for t in top[:8]:
             y = _ensure_space(c, y, 3.2 * cm, h)
             feat = t.get("feature", "N/A")
             sval = _fmt_prob(t.get("shap_value"))
             val = t.get("value", "N/A")
-            y = _line(c, f"- {feat}: impact={sval}, value={val}", 2.4 * cm, y, "Helvetica", 9)
+            y = _line(c, f"- {feat}: coefficient={sval}, value={val}", 2.4 * cm, y, "Helvetica", 9)
     y -= 0.6 * cm
 
     # 2) Genomics

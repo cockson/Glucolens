@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import Locked from "./Locked.jsx";
@@ -12,10 +12,10 @@ export default function ReferralView(){
   const [busy,setBusy]=useState(false);
   const [locked,setLocked]=useState(null);
 
-  async function fetchReferral(){
+  const fetchReferral = useCallback(async () => {
     const r = await api.get(`/api/referrals/${id}`);
     setRef(r.data);
-  }
+  }, [id]);
 
   useEffect(()=>{
     fetchReferral()
@@ -23,7 +23,7 @@ export default function ReferralView(){
         if (isLockedError(e)) setLocked(lockedMessage(e));
         else setErr(e?.response?.data?.detail || "Failed");
       });
-  },[id]);
+  },[fetchReferral]);
 
   async function accept(){
     setErr("");

@@ -91,8 +91,9 @@ def fusion_predict_endpoint(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    if user.role != "public":
-        require_active_subscription(user=user, db=db)
+    if user.role == "public":
+        raise HTTPException(status_code=403, detail="Public users can only use Public Quick-Check screening")
+    require_active_subscription(user=user, db=db)
 
     try:
         payload_obj = json.loads(payload)
@@ -100,15 +101,17 @@ def fusion_predict_endpoint(
         raise HTTPException(status_code=400, detail="payload must be valid JSON")
     if not isinstance(payload_obj, dict):
         raise HTTPException(status_code=400, detail="payload must be a JSON object")
-    tabular_inputs = derive_tabular_features({k: v for k, v in payload_obj.items() if k != "genomics"})
+    tabular_payload = {k: v for k, v in payload_obj.items() if k not in {"genomics", "consent"}}
+    consent = payload_obj.get("consent") if isinstance(payload_obj.get("consent"), dict) else {}
+    tabular_inputs = derive_tabular_features(tabular_payload)
     genomics_inputs = payload_obj.get("genomics") if isinstance(payload_obj.get("genomics"), dict) else None
 
     prediction_id = None
     try:
         try:
-            tab = predict_tabular(payload_obj)
+            tab = predict_tabular(tabular_payload)
         except Exception as tab_err:
-            tab = _fallback_tabular(payload_obj, f"{type(tab_err).__name__}: {str(tab_err)}")
+            tab = _fallback_tabular(tabular_payload, f"{type(tab_err).__name__}: {str(tab_err)}")
         p_tab = tab["probabilities"]["t2d"]
 
         p_ret = None
@@ -185,8 +188,8 @@ def fusion_predict_endpoint(
             modality="fusion",
             model_name="fusion",
             model_version="v3",
-            consent_version=None,
-            consent_json=json.dumps({}, sort_keys=True),
+            consent_version=consent.get("version"),
+            consent_json=json.dumps(consent, sort_keys=True),
             input_json=json.dumps(
                 {
                     "tabular_inputs": tabular_inputs,
@@ -228,8 +231,9 @@ def fusion_report(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    if user.role != "public":
-        require_active_subscription(user=user, db=db)
+    if user.role == "public":
+        raise HTTPException(status_code=403, detail="Public users can only use Public Quick-Check screening")
+    require_active_subscription(user=user, db=db)
     rec = db.query(PredictionRecord).filter(PredictionRecord.id == prediction_id).first()
     if not rec:
         raise HTTPException(status_code=404, detail="Prediction not found")

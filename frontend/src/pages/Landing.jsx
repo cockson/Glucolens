@@ -5,8 +5,8 @@ import { getAuth } from "../lib/authStore";
 function LandingRedirect() {
   const auth = getAuth();
   if (!auth?.access_token) return null;
-  if (auth?.role === "public") return <Navigate to="/screening/fusion" replace />;
-  return <Navigate to="/dashboard" replace />;
+  if (auth?.role === "public") return <Navigate to="/quick-check" replace />;
+  return <Navigate to="/screening/fusion" replace />;
 }
 
 export default function Landing() {

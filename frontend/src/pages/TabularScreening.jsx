@@ -40,8 +40,6 @@ export default function TabularScreening() {
     waist_circumference: "",
     systolic_bp: "",
     diastolic_bp: "",
-    fasting_glucose_mgdl: "",
-    hba1c_pct: "",
     family_history_diabetes: "",
     physical_activity: "",
     smoking_status: "",
@@ -76,8 +74,6 @@ export default function TabularScreening() {
     if (form.waist_circumference && (Number(form.waist_circumference) < 40 || Number(form.waist_circumference) > 220)) return "Waist circumference must be 40-220 cm";
     if (form.systolic_bp && (Number(form.systolic_bp) < 70 || Number(form.systolic_bp) > 260)) return "SBP must be 70-260";
     if (form.diastolic_bp && (Number(form.diastolic_bp) < 40 || Number(form.diastolic_bp) > 160)) return "DBP must be 40-160";
-    if (form.fasting_glucose_mgdl && (Number(form.fasting_glucose_mgdl) < 40 || Number(form.fasting_glucose_mgdl) > 500)) return "Fasting glucose must be 40-500 mg/dL";
-    if (form.hba1c_pct && (Number(form.hba1c_pct) < 3 || Number(form.hba1c_pct) > 20)) return "HbA1c must be 3-20%";
     return null;
   }
 
@@ -270,22 +266,6 @@ export default function TabularScreening() {
                 <input className="input" type="number" min="40" max="160" step="1" inputMode="numeric" value={form.diastolic_bp} onChange={(e) => set("diastolic_bp", e.target.value)} placeholder="90 (40-160)" />
               </div>
             </div>
-
-            <div style={{ height: 10 }} />
-
-            <div className="row">
-              <div>
-                <label className="small">Fasting glucose (mg/dL)</label>
-                <input className="input" type="number" min="40" max="500" step="0.1" inputMode="decimal" value={form.fasting_glucose_mgdl} onChange={(e) => set("fasting_glucose_mgdl", e.target.value)} placeholder="110 (40-500)" />
-              </div>
-              <div>
-                <label className="small">HbA1c (%)</label>
-                <input className="input" type="number" min="3" max="20" step="0.1" inputMode="decimal" value={form.hba1c_pct} onChange={(e) => set("hba1c_pct", e.target.value)} placeholder="6.2 (3-20)" />
-              </div>
-            </div>
-            <p className="small" style={{ marginTop: 8 }}>
-              Diagnostic labs are included in the report but excluded from model scoring to avoid leakage.
-            </p>
 
             <div style={{ height: 10 }} />
 

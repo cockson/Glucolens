@@ -45,7 +45,7 @@ function Protected({ children }) {
 function ClinicianOnly({ children }) {
   const auth = getAuth();
   if (!auth?.access_token) return <Navigate to="/login" replace />;
-  if (!CLINICIAN_ROLES.has(auth?.role)) return <Navigate to="/screening/fusion" replace />;
+  if (!CLINICIAN_ROLES.has(auth?.role)) return <Navigate to="/quick-check" replace />;
   return children;
 }
 
@@ -84,14 +84,14 @@ export default function App() {
             <Route path="/referral/:id" element={<ClinicianOnly><ReferralView /></ClinicianOnly>} />
             <Route path="/models/tabular" element={<ClinicianOnly><TabularInsights /></ClinicianOnly>} />
             <Route path="/screening/tabular" element={<ClinicianOnly><TabularScreening /></ClinicianOnly>} />
-            <Route path="/quick-check" element={<ClinicianOnly><PublicQuickCheck /></ClinicianOnly>} />
+            <Route path="/quick-check" element={<Protected><PublicQuickCheck /></Protected>} />
             <Route path="/monitoring" element={<ClinicianOnly><Monitoring /></ClinicianOnly>} />
             <Route path="/validation" element={<ClinicianOnly><ExternalValidation /></ClinicianOnly>} />
             <Route path="/screening/retina" element={<ClinicianOnly><RetinaScreening /></ClinicianOnly>} />
             <Route path="/models/retina" element={<ClinicianOnly><RetinaInsights /></ClinicianOnly>} />
             <Route path="/models/skin" element={<ClinicianOnly><SkinInsights /></ClinicianOnly>} />
             <Route path="/models/fusion" element={<ClinicianOnly><FusionInsights /></ClinicianOnly>} />
-            <Route path="/screening/fusion" element={<Protected><FusionScreening /></Protected>} />
+            <Route path="/screening/fusion" element={<ClinicianOnly><FusionScreening /></ClinicianOnly>} />
             <Route path="/governance/thresholds" element={<ClinicianOnly><ThresholdGovernance /></ClinicianOnly>} />
             <Route path="/screening/skin" element={<ClinicianOnly><SkinScreening /></ClinicianOnly>} />
             <Route path="/screening/genomics" element={<ClinicianOnly><GenomicsScreening /></ClinicianOnly>} />

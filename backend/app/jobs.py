@@ -50,5 +50,12 @@ def run_validation_job(run_id: str, dataset_id: str):
             run.metrics_json = json.dumps(metrics, sort_keys=True)
             run.report_pdf_path = report_path
             db.commit()
+    except Exception as exc:
+        run = db.query(ValidationRun).filter(ValidationRun.id == run_id).first()
+        if run:
+            run.status = "failed"
+            run.metrics_json = json.dumps({"error": f"{type(exc).__name__}: {exc}"}, sort_keys=True)
+            db.commit()
+        raise
     finally:
         db.close()

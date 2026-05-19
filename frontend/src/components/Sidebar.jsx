@@ -80,7 +80,7 @@ export default function Sidebar(){
   const publicNav = [
     {
       title: "Screening",
-      items: [{ to: "/screening/fusion", label: "Fusion Screening" }],
+      items: [{ to: "/quick-check", label: "Public Quick-Check" }],
     },
   ];
 

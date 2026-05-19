@@ -1,5 +1,5 @@
 import uuid
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -23,14 +23,21 @@ def _ensure_linked_prediction_column(db: Session):
 
 @router.post("/")
 def record_outcome(payload: dict, db: Session = Depends(get_db), user: User = Depends(require_active_subscription)):
+    patient_key = str(payload.get("patient_key") or "").strip()
+    outcome_label = str(payload.get("outcome_label") or "").strip()
+    if not patient_key:
+        raise HTTPException(status_code=400, detail="patient_key is required")
+    if not outcome_label:
+        raise HTTPException(status_code=400, detail="outcome_label is required")
+
     _ensure_linked_prediction_column(db)
     row = Outcome(
         id=_uuid(),
         referral_id=payload.get("referral_id"),
         org_id=user.org_id,
         facility_id=user.facility_id,
-        patient_key=payload["patient_key"],
-        outcome_label=payload["outcome_label"],
+        patient_key=patient_key,
+        outcome_label=outcome_label,
         notes=payload.get("notes"),
     )
     db.add(row)

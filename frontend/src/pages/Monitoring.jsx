@@ -47,7 +47,12 @@ export default function Monitoring(){
     }
   }
 
-  useEffect(()=>{ loadAll(); },[]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      loadAll();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   if (locked) return <Locked message={locked} />;
 

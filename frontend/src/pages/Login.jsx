@@ -31,7 +31,7 @@ export default function Login() {
       setAuthHeader(tokenRes.data.access_token);
       const me = await api.get("/api/auth/me");
       setAuth({ ...tokenRes.data, ...me.data });
-      nav("/dashboard");
+      nav(me.data?.role === "public" ? "/quick-check" : "/screening/fusion");
     } catch (e2) {
       clearAuth();
       const status = e2?.response?.status;

@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState } from "react";
 import { api, SCREENING_TIMEOUT_MS } from "../lib/api";
 import { getAuth } from "../lib/authStore";
+import ConsentCard from "../components/ConsentCard.jsx";
 import Locked from "./Locked.jsx";
 import { isLockedError, lockedMessage } from "../lib/errors";
 import { Link } from "react-router-dom";
@@ -51,7 +52,8 @@ export default function FusionScreening(){
     Object.fromEntries(DEFAULT_GENO_FEATURES.map((k) => [k, ""]))
   );
 
-  const [country, setCountry] = useState("NG");
+  const [country, setCountry] = useState(import.meta.env.VITE_DEFAULT_COUNTRY || "NG");
+  const [consent, setConsent] = useState({ ok: isPublic ? true : false });
   const [patientKey, setPatientKey] = useState("");
   const [form, setForm] = useState({
     age: "",
@@ -61,8 +63,6 @@ export default function FusionScreening(){
     waist_circumference: "",
     systolic_bp: "",
     diastolic_bp: "",
-    fasting_glucose_mgdl: "",
-    hba1c_pct: "",
     family_history_diabetes: "",
     physical_activity: "",
     smoking_status: "",
@@ -82,6 +82,17 @@ export default function FusionScreening(){
     if (label === "retake_image") return "Retake Image Needed";
     if (label === "insufficient_data") return "Insufficient Data";
     return label || "N/A";
+  };
+
+  const fusionReasonText = (reason) => {
+    if (reason === "fusion") return "Trained fusion model used available modalities";
+    if (reason === "fallback_tabular_only") return "Fusion unavailable; tabular score used";
+    if (reason === "near_threshold_conservative") return "Near threshold; conservative referral";
+    if (reason === "missing_tabular") return "Missing tabular data";
+    if (reason === "retina_quality_failed") return "Retina image quality failed";
+    if (reason === "skin_quality_failed") return "Skin image quality failed";
+    if (reason === "genomics_quality_failed") return "Genomics quality failed";
+    return reason || "N/A";
   };
 
   function genomicsSpec(feature){
@@ -175,6 +186,7 @@ export default function FusionScreening(){
 
     const nextErrors = {};
 
+    if (!isPublic && !consent?.ok) nextErrors.consent = "Consent is required.";
     if (!isPublic && patientKey.trim().length === 0) nextErrors.patientKey = "Patient key is required for clinical tracking.";
     if (!COUNTRY_RE.test(country.trim().toUpperCase())) {
       nextErrors.country = "Country must be a 2-letter code (for example, NG).";
@@ -188,8 +200,6 @@ export default function FusionScreening(){
       ["waist_circumference", checkRange("Waist circumference", form.waist_circumference, 40, 220)],
       ["systolic_bp", checkRange("Systolic BP", form.systolic_bp, 70, 260)],
       ["diastolic_bp", checkRange("Diastolic BP", form.diastolic_bp, 40, 160)],
-      ["fasting_glucose_mgdl", checkRange("Fasting glucose", form.fasting_glucose_mgdl, 40, 500)],
-      ["hba1c_pct", checkRange("HbA1c", form.hba1c_pct, 3, 20)],
     ];
     tabularChecks.forEach(([k, msg]) => {
       if (msg) nextErrors[k] = msg;
@@ -242,10 +252,11 @@ export default function FusionScreening(){
       if (!Object.keys(genomics).length) genomics = null;
 
       const payloadObj = {
-        country_code: country,
+        country_code: country.trim().toUpperCase(),
         patient_key: patientKey.trim() || null,
         ...Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === "" ? null : v])),
         genomics,
+        consent: isPublic ? null : consent,
       };
 
       const fd = new FormData();
@@ -315,6 +326,7 @@ export default function FusionScreening(){
 
   const skinOverlay = result?.skin?.explainability?.overlay_png_base64
     ? `data:image/png;base64,${result.skin.explainability.overlay_png_base64}` : null;
+  const genomicsProvided = Boolean(result?.genomics && !result.genomics?.error);
 
   return (
     <div className="container">
@@ -410,22 +422,6 @@ export default function FusionScreening(){
 
           <div className="row" style={{marginTop:10}}>
             <div>
-              <label className="small">Fasting glucose (mg/dL)</label>
-              <input className={`input ${fieldErrors.fasting_glucose_mgdl ? "input-error" : ""}`} type="number" min="40" max="500" step="0.1" inputMode="decimal" value={form.fasting_glucose_mgdl} onChange={e=>set("fasting_glucose_mgdl",e.target.value)} placeholder=" 40 - 500" />
-              {fieldErrors.fasting_glucose_mgdl && <div className="field-error">{fieldErrors.fasting_glucose_mgdl}</div>}
-            </div>
-            <div>
-              <label className="small">HbA1c (%)</label>
-              <input className={`input ${fieldErrors.hba1c_pct ? "input-error" : ""}`} type="number" min="3" max="20" step="0.1" inputMode="decimal" value={form.hba1c_pct} onChange={e=>set("hba1c_pct",e.target.value)} placeholder="3 - 20" />
-              {fieldErrors.hba1c_pct && <div className="field-error">{fieldErrors.hba1c_pct}</div>}
-            </div>
-          </div>
-          <p className="small" style={{ marginTop: 8 }}>
-            Diagnostic labs are included in the report but excluded from model scoring to avoid leakage.
-          </p>
-
-          <div className="row" style={{marginTop:10}}>
-            <div>
               <label className="small">Physical activity</label>
               <select className="input" value={form.physical_activity} onChange={e=>set("physical_activity",e.target.value)}>
                 <option value="">Unknown</option>
@@ -503,6 +499,13 @@ export default function FusionScreening(){
       <div className="row" style={{ alignItems: "start", marginTop: 16 }}>
         <div className="card">
           <h3 style={{ marginTop:0 }}>Run Fusion</h3>
+          {!isPublic && (
+            <>
+              <ConsentCard country={country} lang={import.meta.env.VITE_DEFAULT_LANG || "en"} onChange={setConsent} />
+              {fieldErrors.consent && <div className="field-error">{fieldErrors.consent}</div>}
+              <div style={{height:12}} />
+            </>
+          )}
           <button className="btn" onClick={run} disabled={busy}>{busy ? "Running..." : "Run Fusion Screening"}</button>
           {err && <p style={{color:"#ff8080"}}>{err}</p>}
         </div>
@@ -514,9 +517,9 @@ export default function FusionScreening(){
               <p className="small">
                 Final: <b>{fusionLabelText(result.fusion?.final_label)}</b><br/>
                 p: <b>{result.fusion?.final_proba === null ? "N/A" : Number(result.fusion?.final_proba).toFixed(3)}</b><br/>
-                reason: {result.fusion?.reason}<br/>
+                reason: {fusionReasonText(result.fusion?.reason)}<br/>
                 threshold: {result.threshold_used}<br/>
-                genomics p: <b>{result.genomics?.probability === undefined || result.genomics?.probability === null ? "N/A" : Number(result.genomics?.probability).toFixed(3)}</b>
+                genomics: <b>{genomicsProvided ? `included (p=${Number(result.genomics.probability).toFixed(3)})` : "not provided"}</b>
               </p>
               <div className="card" style={{ marginTop: 10 }}>
                 <b>Interpretation</b>

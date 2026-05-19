@@ -9,6 +9,9 @@ sqlalchemy==2.0.28
 psycopg2-binary==2.9.9
 slowapi==0.1.9
 requests==2.31.0
+urllib3==2.2.3
+charset-normalizer==3.4.0
+chardet==5.2.0
 qrcode==7.4.2
 pydantic[email]
 numpy==1.26.4

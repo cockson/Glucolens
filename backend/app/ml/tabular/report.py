@@ -4,6 +4,16 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.units import cm
 
 
+def _top_features_sorted(items: list[dict]) -> list[dict]:
+    def impact(item):
+        try:
+            return abs(float(item.get("shap_value", 0.0)))
+        except Exception:
+            return 0.0
+
+    return sorted(items, key=impact, reverse=True)
+
+
 def render_tabular_report_pdf(*, prediction: dict, model_card: dict, performance: dict) -> bytes:
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
@@ -52,7 +62,7 @@ def render_tabular_report_pdf(*, prediction: dict, model_card: dict, performance
     y -= 0.6 * cm
 
     c.setFont("Helvetica", 10)
-    top = (prediction.get("explainability") or {}).get("top_features") or []
+    top = _top_features_sorted((prediction.get("explainability") or {}).get("top_features") or [])
     if not top:
         c.drawString(2 * cm, y, "No SHAP details available.")
         y -= 0.5 * cm
