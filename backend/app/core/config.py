@@ -34,4 +34,10 @@ class Settings(BaseSettings):
         env_file = ".env"
         extra = "ignore"
 
+    @property
+    def sqlalchemy_database_url(self) -> str:
+        if self.DATABASE_URL.startswith("postgres://"):
+            return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        return self.DATABASE_URL
+
 settings = Settings()

@@ -33,7 +33,7 @@ def backfill_links(conn):
     """))
 
 def main():
-    engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
+    engine = create_engine(settings.sqlalchemy_database_url, pool_pre_ping=True)
     with engine.begin() as conn:
         ensure_linked_prediction_column(conn)
         backfill_links(conn)
